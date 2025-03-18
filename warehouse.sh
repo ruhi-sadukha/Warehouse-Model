@@ -62,216 +62,216 @@ admin_pass=$(<admin_pass.txt)  # Reads password from the password file
 if [[ "$name" == "admin" ]]; then
     i=0
     while true; do
-    read -p "Enter admin password: " pass
+        read -p "Enter admin password: " pass
     
-    if [[ "$pass" == "$admin_pass" ]]; then
-        echo -e "\nWelcome to the warehouse database!\n"
-        while true; do
-            echo -e "To view or manually update the database, enter the following keys:\n"
-            echo "1: View current database."
-            echo "2: Add new items or update MRP."
-            echo "3: Remove existing items."
-            echo "4: Generate sales report."
-            echo "5: Change admin password."
-            echo -e "\nEnter any other key to go back."
-            read option
+        if [[ "$pass" == "$admin_pass" ]]; then
+            echo -e "\nWelcome to the warehouse database!\n"
+            while true; do
+                echo -e "To view or manually update the database, enter the following keys:\n"
+                echo "1: View current database."
+                echo "2: Add new items or update MRP."
+                echo "3: Remove existing items."
+                echo "4: Generate sales report."    
+                echo "5: Change admin password."
+                echo -e "\nEnter any other key to go back."
+                read option
             
-            if [[ $option == 1 ]]; then
-                echo 
-                print_database
-                echo -e "\nEnter any key to go back."
-                read && clear
+                if [[ $option == 1 ]]; then
+                    echo 
+                    print_database
+                    echo -e "\nEnter any key to go back."
+                    read && clear
                 
-            elif [[ $option == 2 ]]; then
-                echo
-                while true; do
-                    read -p "HSN Code: " add_hsn
+                elif [[ $option == 2 ]]; then
+                    echo
+                    while true; do
+                        read -p "HSN Code: " add_hsn
 
-                    if [[ ! $add_hsn =~ ^[0-9]+$ ]]; then
-                        echo -e "\n⚠︎ Error: HSN Code must have an integer value.\n"
-                        continue
-                    fi
+                        if [[ ! $add_hsn =~ ^[0-9]+$ ]]; then
+                            echo -e "\n⚠︎ Error: HSN Code must have an integer value.\n"
+                            continue
+                        fi
 
-                    # Checking if the HSN Code already exists
-                    existing_hsn=$(awk -v hsn="$add_hsn" -v col_hsn="$col_hsn" '$col_hsn == hsn { print; exit }' "$file")
+                        # Checking if the HSN Code already exists
+                        existing_hsn=$(awk -v hsn="$add_hsn" -v col_hsn="$col_hsn" '$col_hsn == hsn { print; exit }' "$file")
+    
+                        if [[ -n $existing_hsn ]]; then
+                            existing_desc=$(echo "$existing_hsn" | awk -v col_desc="$col_desc" '{print $col_desc}')
+                            existing_qty=$(echo "$existing_hsn" | awk -v col_qty="$col_qty" '{print $col_qty}')
+                            existing_mrp=$(echo "$existing_hsn" | awk -v col_mrp="$col_mrp" '{print $col_mrp}')
+    
+                            echo -e "\nItem: $existing_desc"
+                            echo -e "Current Quantity: $existing_qty"
+                            echo -e "Current MRP: Rs $existing_mrp\n"
+    
+                            # Get new quantity and add it to the existing quantity
+                            while true; do
+                                read -p "Quantity to add (leave blank to keep current): " add_qty
+                    
+                                if [[ ! $add_qty =~ ^([0-9]+)?$ ]]; then
+                                    echo -e "\n⚠︎ Error: Quantity must be a valid integer.\n"
+                                    continue
+                                fi
+                                break
+                            done
+                    
+                            add_qty=${add_qty:-0}
+                            new_qty=$(echo "$existing_qty + $add_qty" | bc)
+    
+                           # Get new MRP, update only if provided
+                            while true; do
+                                read -p "Update price: MRP Rs (leave blank to keep current): " add_price
+                            
+                                if [[ ! $add_price =~ ^([0-9]+(\.[0-9])?)?$ ]]; then
+                                    echo -e "\n⚠︎ Error: Price value must be a number with upto one decimal point.\n"
+                                    continue
+                                fi
+                                break
+                            done
+                    
+                            new_mrp=${add_price:-$existing_mrp}
+    
+                            # Update the database file
+                            awk -v hsn="$add_hsn" -v col_hsn="$col_hsn" -v col_qty="$col_qty" -v col_mrp="$col_mrp" -v new_qty="$new_qty" -v new_mrp="$new_mrp" '
+                            {
+                                if ($col_hsn == hsn) {
+                                    $col_qty = new_qty;
+                                    $col_mrp = new_mrp;
+                                }    
+                                print $0;
+                            }' "$file" > temp && mv temp "$file"
 
-                    if [[ -n $existing_hsn ]]; then
+                            echo -e "\nUpdated $existing_desc with new quantity: $new_qty and MRP: Rs $new_mrp.\n"
+
+                        else
+                            # New item case
+                            read -p "Product description: " add_prod
+                            read -p "Quantity (default: 0): " add_qty
+                            add_qty=${add_qty:-0}
+                            read -p "MRP Rs: " add_price
+
+                         # Append new item to the database
+                            echo "$add_hsn $add_prod $add_qty $add_price" >> "$file"
+                            echo -e "\nAdded new item: $add_prod with quantity: $add_qty and MRP: Rs $add_price.\n"
+                        fi
+
+                        while true; do
+                            read -p "Continue with another item? (y/n): " cont
+                            if [[ "$cont" == "y" ]]; then
+                                echo 
+                                break
+                            elif [[ "$cont" == "n" ]]; then
+                                clear && break 2   
+                            else
+                                echo -e "\n⚠︎ Invalid choice. Please enter either y for yes or n for no.\n"
+                            fi
+                        done
+                    done
+                
+                elif [[ $option == 3 ]]; then
+                    echo
+                    while true; do
+                        read -p "HSN Code: " remove_hsn
+                    
+                        existing_hsn=$(awk -v hsn="$remove_hsn" -v col_hsn="$col_hsn" '$col_hsn == hsn { print; exit }' "$file")
+    
+                        if [[ -z "$existing_hsn" ]]; then
+                            echo -e "\n⚠︎ Error: HSN code not found\n"
+                            continue
+                        fi 
+                    
                         existing_desc=$(echo "$existing_hsn" | awk -v col_desc="$col_desc" '{print $col_desc}')
                         existing_qty=$(echo "$existing_hsn" | awk -v col_qty="$col_qty" '{print $col_qty}')
-                        existing_mrp=$(echo "$existing_hsn" | awk -v col_mrp="$col_mrp" '{print $col_mrp}')
-    
+                        
                         echo -e "\nItem: $existing_desc"
-                        echo -e "Current Quantity: $existing_qty"
-                        echo -e "Current MRP: Rs $existing_mrp\n"
-    
-                        # Get new quantity and add it to the existing quantity
+                        echo -e "Current Quantity: $existing_qty\n"
+                        
+                        # Get new quantity and remove it from the existing quantity
                         while true; do
-                            read -p "Quantity to add (leave blank to keep current): " add_qty
-                    
-                            if [[ ! $add_qty =~ ^([0-9]+)?$ ]]; then
+                            read -p "Quantity to remove (default: 0): " remove_qty
+                            remove_qty=${remove_qty:-0}
+                            new_qty=$(echo "$existing_qty - $remove_qty" | bc)
+                                
+                            if [[ ! $remove_qty =~ ^[0-9]+$ ]]; then
                                 echo -e "\n⚠︎ Error: Quantity must be a valid integer.\n"
                                 continue
-                            fi
-                            break
-                        done
-                    
-                        add_qty=${add_qty:-0}
-                        new_qty=$(echo "$existing_qty + $add_qty" | bc)
-    
-                       # Get new MRP, update only if provided
-                        while true; do
-                            read -p "Update price: MRP Rs (leave blank to keep current): " add_price
-                            
-                            if [[ ! $add_price =~ ^([0-9]+(\.[0-9])?)?$ ]]; then
-                                echo -e "\n⚠︎ Error: Price value must be a number with upto one decimal point.\n"
+                            elif (( new_qty < 0 )); then
+                                echo -e "\n⚠︎ Error: Cannot remove more than available stock.\n"
                                 continue
                             fi
+                        
                             break
                         done
-                    
-                        new_mrp=${add_price:-$existing_mrp}
 
                         # Update the database file
-                        awk -v hsn="$add_hsn" -v col_hsn="$col_hsn" -v col_qty="$col_qty" -v col_mrp="$col_mrp" -v new_qty="$new_qty" -v new_mrp="$new_mrp" '
+                        awk -v hsn="$remove_hsn" -v col_hsn="$col_hsn" -v col_qty="$col_qty" -v new_qty="$new_qty" '
                         {
                             if ($col_hsn == hsn) {
                                 $col_qty = new_qty;
-                                $col_mrp = new_mrp;
-                            }    
+                            }
                             print $0;
                         }' "$file" > temp && mv temp "$file"
 
-                        echo -e "\nUpdated $existing_desc with new quantity: $new_qty and MRP: Rs $new_mrp.\n"
+                        echo -e "\nUpdated $existing_desc with new quantity: $new_qty.\n"
 
-                    else
-                        # New item case
-                        read -p "Product description: " add_prod
-                        read -p "Quantity (default: 0): " add_qty
-                        add_qty=${add_qty:-0}
-                        read -p "MRP Rs: " add_price
-
-                     # Append new item to the database
-                        echo "$add_hsn $add_prod $add_qty $add_price" >> "$file"
-                        echo -e "\nAdded new item: $add_prod with quantity: $add_qty and MRP: Rs $add_price.\n"
-                    fi
-
+                        while true; do
+                            read -p "Continue with another item? (y/n): " cont
+                            if [[ "$cont" == "y" ]]; then
+                                echo 
+                                break
+                            elif [[ "$cont" == "n" ]]; then
+                                clear && break 2   
+                            else
+                                echo -e "\n⚠︎ Invalid choice. Please enter either y for yes or n for no.\n"
+                            fi
+                        done
+                    done
+                
+                elif [[ $option == 4 ]]; then
+                    echo
+                    generate_report
+                    echo -e "\nEnter any key to go back."
+                    read && clear
+            
+                elif [[ $option == 5 ]]; then
+                    echo
+                    read -p "Enter new password: " new_pass
+                    echo  
+                
                     while true; do
-                        read -p "Continue with another item? (y/n): " cont
-                        if [[ "$cont" == "y" ]]; then
-                            echo 
-                            break
-                        elif [[ "$cont" == "n" ]]; then
-                            clear && break 2   
+                        read -p "Confirm password change? (y/n): " confirm
+                        if [[ "$confirm" == "y" ]]; then
+                            echo "$new_pass" > admin_pass.txt  # Change password in the password file
+                            echo -e "\nPassword updated successfully!\n"
+                            echo -e "Enter any key to go back."
+                            read && clear
+                        elif [[ "$confirm" == "n" ]]; then
+                            echo -e "\nPassword change canceled.\n"
+                            echo "Enter any key to go back."
+                            read && clear
                         else
                             echo -e "\n⚠︎ Invalid choice. Please enter either y for yes or n for no.\n"
-                        fi
-                    done
-                done
-                
-            elif [[ $option == 3 ]]; then
-                echo
-                while true; do
-                    read -p "HSN Code: " remove_hsn
-                    
-                    existing_hsn=$(awk -v hsn="$remove_hsn" -v col_hsn="$col_hsn" '$col_hsn == hsn { print; exit }' "$file")
-
-                    if [[ -z "$existing_hsn" ]]; then
-                        echo -e "\n⚠︎ Error: HSN code not found\n"
-                        continue
-                    fi 
-                    
-                    existing_desc=$(echo "$existing_hsn" | awk -v col_desc="$col_desc" '{print $col_desc}')
-                    existing_qty=$(echo "$existing_hsn" | awk -v col_qty="$col_qty" '{print $col_qty}')
-                        
-                    echo -e "\nItem: $existing_desc"
-                    echo -e "Current Quantity: $existing_qty\n"
-                        
-                    # Get new quantity and remove it from the existing quantity
-                    while true; do
-                        read -p "Quantity to remove (default: 0): " remove_qty
-                        remove_qty=${remove_qty:-0}
-                        new_qty=$(echo "$existing_qty - $remove_qty" | bc)
-                            
-                        if [[ ! $remove_qty =~ ^[0-9]+$ ]]; then
-                            echo -e "\n⚠︎ Error: Quantity must be a valid integer.\n"
-                            continue
-                        elif (( new_qty < 0 )); then
-                            echo -e "\n⚠︎ Error: Cannot remove more than available stock.\n"
                             continue
                         fi
-                        
                         break
                     done
-
-                    # Update the database file
-                    awk -v hsn="$remove_hsn" -v col_hsn="$col_hsn" -v col_qty="$col_qty" -v new_qty="$new_qty" '
-                    {
-                        if ($col_hsn == hsn) {
-                            $col_qty = new_qty;
-                        }
-                        print $0;
-                    }' "$file" > temp && mv temp "$file"
-
-                    echo -e "\nUpdated $existing_desc with new quantity: $new_qty.\n"
-
-                    while true; do
-                        read -p "Continue with another item? (y/n): " cont
-                        if [[ "$cont" == "y" ]]; then
-                            echo 
-                            break
-                        elif [[ "$cont" == "n" ]]; then
-                            clear && break 2   
-                        else
-                            echo -e "\n⚠︎ Invalid choice. Please enter either y for yes or n for no.\n"
-                        fi
-                    done
-                done
                 
-            elif [[ $option == 4 ]]; then
-                echo
-                generate_report
-                echo -e "\nEnter any key to go back."
-                read && clear
+                else
+                    clear && continue 3
             
-            elif [[ $option == 5 ]]; then
-                echo
-                read -p "Enter new password: " new_pass
-                echo  
-                
-                while true; do
-                    read -p "Confirm password change? (y/n): " confirm
-                    if [[ "$confirm" == "y" ]]; then
-                        echo "$new_pass" > admin_pass.txt  # Change password in the password file
-                        echo -e "\nPassword updated successfully.\n"
-                        echo -e "\n.Enter any key to go back."
-                        read && clear
-                    elif [[ "$confirm" == "n" ]]; then
-                        echo -e "\nPassword change canceled."
-                        echo -e "\n.Enter any key to go back."
-                        read && clear
-                    else
-                        echo -e "\n⚠︎ Invalid choice. Please enter either y for yes or n for no.\n"
-                        continue
-                    fi
-                    break
-                done
-                
-            else
-                clear && continue 3
-            
-            fi
-        done
-    else
-        ((i++))
-        echo -e "\nSorry! The password is incorrect. $((3-i)) chances remaining.\n"
+                fi
+            done
+        else
+            ((i++))
+            echo -e "\nSorry! The password is incorrect. $((3-i)) chances remaining.\n"
         
-        if [[ $i == 3 ]]; then
-            sleep 1s
-            clear && continue 2
+            if [[ $i == 3 ]]; then
+                sleep 1s
+                clear && continue 2
+            fi
+            continue
         fi
-        continue
-    fi
-    break
+        break
     done
 fi
 
