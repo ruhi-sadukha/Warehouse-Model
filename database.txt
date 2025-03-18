@@ -1,0 +1,5 @@
+HSN_Code Product_Description Quantity MRP
+0701 Potatoes 11 3.5
+070610 Carrots 58 2.5
+070490 Cabbages 67 4.5
+070960 Capsicum 38 2.0
