@@ -279,6 +279,7 @@ fi
 
 hour=$(date +%H) 
 
+#(Store hours are 7am to 9 pm)
 if [[ $hour -lt 12 ]]; then
     echo -e "Good morning $Name! Welcome to our store ☺\n"
 elif [[ $hour -ge 12 && $hour -lt 18 ]]; then
@@ -460,7 +461,7 @@ fi
 
 sleep 3s && clear
 
-if [[ $hour -gt 15 ]]; then
+if [[ $hour -gt 21 ]]; then
     clear
     echo "Our store has closed. Please visit us on the next working day!"
     report_name=$(date | awk '{print $2, $3, $7}')
