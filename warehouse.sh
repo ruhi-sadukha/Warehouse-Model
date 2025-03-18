@@ -269,8 +269,6 @@ if [[ "$name" == "admin" ]]; then
             sleep 1s
             clear && continue 2
         fi
-        
-        
         continue
     fi
     break
