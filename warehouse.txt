@@ -1,0 +1,48 @@
+PFB program for your reference.
+
+Supermarket: (Note: Combination of two programs)
+
+You can use text file for database.
+
+1) Warehouse Desk:
+
+               New item:  HSN Code (unique), Product Description, Quantity, MRP ✔️
+
+               Update Item: MRP and Quantity (Note: Use HSN Code as unique entity) ✔️
+
+               Add Items in Warehouse. (Note: We can add as many items as we want) ✔️
+
+
+
+2) Customer Desk:
+
+               To Generate Bill, take the following inputs:
+
+               1) customer 1(Name): ✔️
+
+               2) Type HSN Code ✔️
+
+               Auto Show Product Description ✔️
+
+               3) Add Quantity ✔️
+
+               (Continuously ask to add item. Can exit any time and generate the bill.) ✔️
+
+               Generate the customer's bill with Total MRP. ✔️
+
+               ii) customer 2:
+
+               Repeat above steps and generate multiple bills. ✔️
+
+               Update warehouse stock each time you generate customer bill. ✔️
+               
+
+3) At the end of the day:
+
+               1) Generate report of sales. ✔️
+
+               1) Show remaining items in warehouse. ✔️
+
+               2) Generate all customers bill report. ✔️
+               
+Note : When a customer buys an item from the warehouse, the stock must be deducted accordingly. ✔️
